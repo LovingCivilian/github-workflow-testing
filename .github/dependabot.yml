@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Keeps pinned action SHAs current. Always keep this entry.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+      include: "scope"        # produces ci(deps): ..., matching Conventional Commits
+    groups:
+      actions:
+        patterns: ["*"]

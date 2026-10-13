@@ -1,0 +1,6 @@
+# Owners are requested for review automatically on PRs touching these paths.
+# Later lines take precedence over earlier ones. Owners must have write access.
+# @LovingCivilian is a user (@login) or a team (@org/team-name), never an organisation login.
+
+*                     @LovingCivilian
+/.github/             @LovingCivilian

@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+  merge_group:          # harmless without a merge queue; required with one
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only by default. Grant write scopes per job, only where a job needs them.
+permissions:
+  contents: read
+
+# Cancel superseded PR runs; never cancel runs on the default branch, so the
+# merged commit always gets a complete result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test-matrix:
+    name: test (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12"]        # add versions as needed; the gate job below keeps the check name stable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # TODO: replace with the project's setup action, SHA-pinned, for example
+      # - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      #   with:
+      #     python-version: ${{ matrix.python }}
+      #     cache: pip               # needs requirements*.txt or pyproject.toml to exist
+      - name: Install dependencies
+        run: echo "TODO install dependencies"
+
+      - name: Lint
+        run: echo "TODO run linter"
+
+      - name: Test
+        run: echo "TODO run tests"
+
+  lint-workflows:
+    # Syntax (actionlint) and security (zizmor) checks on the workflow files.
+    # Runs every time: it takes seconds, and change detection on a shallow PR
+    # checkout is unreliable.
+    name: lint-workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install linters (pinned; bump deliberately)
+        run: pip install --quiet "actionlint-py==1.7.12.25" "zizmor==1.30.1"
+      - name: actionlint
+        run: actionlint
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}     # enables the online audits; read-only token
+        run: zizmor --min-severity medium .github/workflows
+
+  test:
+    # Gate job: the only check the ruleset requires. Its name never changes
+    # when the matrix does, and it fails if anything it depends on failed.
+    name: test
+    needs: [test-matrix, lint-workflows]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Fail if any dependency failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo "all checks passed"
