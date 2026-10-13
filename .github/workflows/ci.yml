@@ -43,7 +43,7 @@ jobs:
         run: echo "TODO run linter"
 
       - name: Test
-        run: echo "TODO run tests"
+        run: exit 1
 
   lint-workflows:
     # Syntax (actionlint) and security (zizmor) checks on the workflow files.
